@@ -17,15 +17,24 @@ It takes a project ID and Cloud Run service name as an input, and creates a dash
 
 ```hcl
 module "cloudrun-dashboard" {
-  source = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard/"
-  project_id = "[MY-PROJECT]"
+  source       = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard/"
+  project_id   = "[MY-PROJECT]"
   service_name = "[MY-SERVICE]"
 }
 ```
 
+This can be useful if you want to get a quick overview of your Cloud Run service's performance across many regions, where the service has the same name in each region.
+
 When exporting a dashboard from the console, there are certain fields that the console defaults to that do not get reconciled by the tf provider.
 This results in permanent diffs during `terraform plan`.
 In most cases you shouldn't have to care, except when redefining exported dashboards.
+
+The module outputs the URL of the dashboard in the Google Cloud Console.
+It dashboard looks something like this:
+
+![Screenshot of an example dashboard](./screenshot.png)
+
+_(This is probably out of date!)_
 
 ## Advanced Usage: Customizing a dashboard
 
