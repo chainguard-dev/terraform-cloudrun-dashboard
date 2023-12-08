@@ -8,6 +8,13 @@ locals {
   ]
 }
 
+module "alert" {
+  for_each   = toset(var.prober_alert_policies)
+  source     = "./alert-tile"
+  title      = "Prober: ${each.key}"
+  alert_name = each.key
+}
+
 module "logs" {
   source = "./logs-tile"
   title  = "Service Logs"
@@ -110,23 +117,28 @@ resource "google_monitoring_dashboard" "dashboard" {
     "displayName" : "${var.service_name}",
     "gridLayout" : {
       "columns" : 3,
-      "widgets" : [
-        // module.logs.tile, TODO: This is broken -- panic at removeComputedKeys
-        module.request_count.tile,
-        module.incoming_latency.tile,
-        module.instance_count.tile,
-        module.cpu_utilization.tile,
-        module.memory_utilization.tile,
-        module.startup_latency.tile,
-        module.sent_bytes.tile,
-        module.received_bytes.tile,
-        {
-          "text" : {
-            "content" : "_Created on ${timestamp()}_",
-            "format" : "MARKDOWN"
-          },
-        }
-      ]
+      "widgets" : concat(
+        // TODO: This is broken, as is the module.logs.tile, seemingly due to
+        // https://github.com/hashicorp/terraform-provider-google/issues/16439
+        // [for i in var.prober_alert_policies : module.alert[i].tile],
+        [
+          // module.logs.tile
+          module.request_count.tile,
+          module.incoming_latency.tile,
+          module.instance_count.tile,
+          module.cpu_utilization.tile,
+          module.memory_utilization.tile,
+          module.startup_latency.tile,
+          module.sent_bytes.tile,
+          module.received_bytes.tile,
+          {
+            "text" : {
+              "content" : "_Created on ${timestamp()}_",
+              "format" : "MARKDOWN"
+            },
+          }
+        ],
+      )
     }
   })
 }
