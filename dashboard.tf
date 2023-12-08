@@ -1,18 +1,12 @@
 locals {
-  width      = 4
-  full_width = 3 * local.width
-
-  common_filter = [
-    "resource.type=\"cloud_run_revision\"",
-    "resource.label.\"service_name\"=\"${var.service_name}\"",
-  ]
+  common_filter = ["resource.type=\"cloud_run_revision\""]
 }
 
 module "alert" {
-  for_each   = toset(var.prober_alert_policies)
+  for_each   = var.prober_alert_policies
   source     = "./alert-tile"
-  title      = "Prober: ${each.key}"
-  alert_name = each.key
+  title      = "Alert: ${each.key}"
+  alert_name = each.value.id
 }
 
 module "logs" {
@@ -114,15 +108,17 @@ resource "google_monitoring_dashboard" "dashboard" {
   project = var.project_id
 
   dashboard_json = jsonencode({
-    "displayName" : "${var.service_name}",
-    "gridLayout" : {
-      "columns" : 3,
-      "widgets" : concat(
-        // TODO: This is broken, as is the module.logs.tile, seemingly due to
-        // https://github.com/hashicorp/terraform-provider-google/issues/16439
-        // [for i in var.prober_alert_policies : module.alert[i].tile],
+    displayName = "${var.service_name}"
+    dashboardFilters = [{
+      filterType  = "RESOURCE_LABEL"
+      stringValue = var.service_name
+      labelKey    = "service_name"
+    }]
+    gridLayout = {
+      widgets = concat(
+        [for k, _ in var.prober_alert_policies : module.alert[k].tile],
         [
-          // module.logs.tile
+          module.logs.tile,
           module.request_count.tile,
           module.incoming_latency.tile,
           module.instance_count.tile,
@@ -131,12 +127,20 @@ resource "google_monitoring_dashboard" "dashboard" {
           module.startup_latency.tile,
           module.sent_bytes.tile,
           module.received_bytes.tile,
-          {
-            "text" : {
-              "content" : "_Created on ${timestamp()}_",
-              "format" : "MARKDOWN"
-            },
-          }
+
+          // These also work:
+          //{ text = {
+          //  content = "_Created on ${timestamp()}_",
+          //  format  = "MARKDOWN"
+          //} },
+          //{ blank = {} },
+
+          // Only allowed in mosaicLayout, where we manage rows/columns ourselves :(
+          // { collapsibleGroup = { collapsed = true } },
+
+          // NB: Sometimes updating the dashboard fails due to:
+          // https://github.com/hashicorp/terraform-provider-google/issues/16439
+          // When this happens, terraform destroy and apply again.
         ],
       )
     }
