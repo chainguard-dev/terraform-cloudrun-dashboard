@@ -116,7 +116,7 @@ resource "google_monitoring_dashboard" "dashboard" {
     }]
     gridLayout = {
       widgets = concat(
-        [for k, _ in var.prober_alert_policies : module.alert[k].tile],
+        [for k in sort(keys(var.prober_alert_policies)) : module.alert[k].tile],
         [
           module.logs.tile,
           module.request_count.tile,
