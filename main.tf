@@ -20,3 +20,4 @@ module "cron-prb" {
 output "cron-prb-url" {
   value = module.cron-prb.url
 }
+
