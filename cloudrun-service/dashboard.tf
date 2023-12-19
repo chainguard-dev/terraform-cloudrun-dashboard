@@ -3,27 +3,23 @@ locals {
 }
 
 module "alert" {
-  for_each   = var.prober_alert_policies
-  source     = "./alert-tile"
+  for_each   = var.alert_policies
+  source     = "../tiles/alert"
   title      = "Alert: ${each.key}"
   alert_name = each.value.id
 }
 
 module "logs" {
-  source = "./logs-tile"
+  source = "../tiles/logs"
   title  = "Service Logs"
   filter = local.common_filter
 }
 
 module "request_count" {
-  source = "./tile"
-  title  = "Request count"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/request_count\"",
-  ])
-  group_by_fields = [
-    "metric.label.\"response_code_class\"",
-  ]
+  source           = "../tiles/xy"
+  title            = "Request count"
+  filter           = concat(local.common_filter, ["metric.type=\"run.googleapis.com/request_count\""])
+  group_by_fields  = ["metric.label.\"response_code_class\""]
   primary_align    = "ALIGN_RATE"
   primary_reduce   = "REDUCE_NONE"
   secondary_align  = "ALIGN_NONE"
@@ -31,77 +27,59 @@ module "request_count" {
 }
 
 module "incoming_latency" {
-  source = "./latency-tile"
+  source = "../tiles/latency"
   title  = "Incoming request latency"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/request_latencies\"",
-  ])
+  filter = concat(local.common_filter, ["metric.type=\"run.googleapis.com/request_latencies\""])
 }
 
 module "instance_count" {
-  source = "./tile"
-  title  = "Instance count + revisions"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/container/instance_count\"",
-  ])
-  group_by_fields = ["resource.label.\"revision_name\""] // Group by revision name.
+  source          = "../tiles/xy"
+  title           = "Instance count + revisions"
+  filter          = concat(local.common_filter, ["metric.type=\"run.googleapis.com/container/instance_count\""])
+  group_by_fields = ["resource.label.\"revision_name\""]
   primary_align   = "ALIGN_MEAN"
   primary_reduce  = "REDUCE_SUM"
   plot_type       = "STACKED_AREA"
 }
 
 module "cpu_utilization" {
-  source = "./tile"
-  title  = "CPU utilization"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/container/cpu/utilizations\"",
-  ])
+  source         = "../tiles/xy"
+  title          = "CPU utilization"
+  filter         = concat(local.common_filter, ["metric.type=\"run.googleapis.com/container/cpu/utilizations\""])
   primary_align  = "ALIGN_DELTA"
   primary_reduce = "REDUCE_MEAN"
 }
 
 module "memory_utilization" {
-  source = "./tile"
-  title  = "Memory utilization"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/container/memory/utilizations\"",
-  ])
+  source         = "../tiles/xy"
+  title          = "Memory utilization"
+  filter         = concat(local.common_filter, ["metric.type=\"run.googleapis.com/container/memory/utilizations\""])
   primary_align  = "ALIGN_DELTA"
   primary_reduce = "REDUCE_MEAN"
 }
 
 module "startup_latency" {
-  source = "./tile"
-  title  = "Startup latency"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/container/startup_latencies\"",
-  ])
+  source         = "../tiles/xy"
+  title          = "Startup latency"
+  filter         = concat(local.common_filter, ["metric.type=\"run.googleapis.com/container/startup_latencies\""])
   primary_align  = "ALIGN_DELTA"
   primary_reduce = "REDUCE_MEAN"
 }
 
 module "sent_bytes" {
-  source = "./tile"
-  title  = "Sent bytes"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/container/network/sent_bytes_count\"",
-  ])
+  source         = "../tiles/xy"
+  title          = "Sent bytes"
+  filter         = concat(local.common_filter, ["metric.type=\"run.googleapis.com/container/network/sent_bytes_count\""])
   primary_align  = "ALIGN_MEAN"
   primary_reduce = "REDUCE_NONE"
 }
 
 module "received_bytes" {
-  source = "./tile"
-  title  = "Received bytes"
-  filter = concat(local.common_filter, [
-    "metric.type=\"run.googleapis.com/container/network/received_bytes_count\"",
-  ])
+  source         = "../tiles/xy"
+  title          = "Received bytes"
+  filter         = concat(local.common_filter, ["metric.type=\"run.googleapis.com/container/network/received_bytes_count\""])
   primary_align  = "ALIGN_MEAN"
   primary_reduce = "REDUCE_NONE"
-}
-
-locals {
-  blank = { "blank" = {} }
 }
 
 resource "google_monitoring_dashboard" "dashboard" {
@@ -114,9 +92,11 @@ resource "google_monitoring_dashboard" "dashboard" {
       stringValue = var.service_name
       labelKey    = "service_name"
     }]
+    //  https://cloud.google.com/monitoring/api/ref_v3/rest/v1/projects.dashboards#GridLayout
     gridLayout = {
+      columns = 3
       widgets = concat(
-        [for k in sort(keys(var.prober_alert_policies)) : module.alert[k].tile],
+        [for k in sort(keys(var.alert_policies)) : module.alert[k].tile],
         [
           module.logs.tile,
           module.request_count.tile,

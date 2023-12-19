@@ -6,13 +6,12 @@ locals {
   bands = [50, 95, 99]
 }
 
+// https://cloud.google.com/monitoring/api/ref_v3/rest/v1/projects.dashboards#XyChart
 output "tile" {
   value = {
     title = var.title
     xyChart = {
-      chartOptions = {
-        mode = "COLOR"
-      }
+      chartOptions = { mode = "COLOR" }
       dataSets = [for band in local.bands : {
         minAlignmentPeriod = "60s"
         plotType           = "LINE"

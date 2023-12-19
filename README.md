@@ -17,7 +17,7 @@ It takes a project ID and Cloud Run service name as an input, and creates a dash
 
 ```hcl
 module "cloudrun-dashboard" {
-  source       = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard/"
+  source       = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard/cloudrun-service"
   project_id   = "[MY-PROJECT]"
   service_name = "[MY-SERVICE]"
 }
@@ -25,7 +25,7 @@ module "cloudrun-dashboard" {
 
 This can be useful if you want to get a quick overview of your Cloud Run service's performance across many regions, where the service has the same name in each region.
 
-When exporting a dashboard from the console, there are certain fields that the console defaults to that do not get reconciled by the tf provider.
+When exporting a dashboard from the console, there are certain fields that the console defaults to that do not get reconciled by the Terraform provider.
 This results in permanent diffs during `terraform plan`.
 In most cases you shouldn't have to care, except when redefining exported dashboards.
 
@@ -36,7 +36,32 @@ It dashboard looks something like this:
 
 _(This is probably out of date!)_
 
-## Advanced Usage: Customizing a dashboard
+There's also a dashboard for Cloud Run Jobs:
+
+```hcl
+module "cloudrun-job" {
+  source       = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard/cloudrun-job"
+  project_id   = "[MY-PROJECT]"
+  job_name     = "[MY-JOB]"
+}
+```
+
+## Advanced Usage: Alert Graphs
+
+If you've defined alert policies, you can display graphs for those policies at the top of the dashboard too:
+
+```
+module "cloudrun-service" {
+  source       = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard/cloudrun-service"
+  project_id   = "[MY-PROJECT]"
+  service_name = "[MY-SERVICE]"
+  alert_policies {
+    "Prober": google_monitoring_alert_policy.prober.name
+  }
+}
+```
+
+## Advanced Usage: Customizing a dashboard with modular tiles
 
 Tiles in the dashboard are defined as sub-modules in this repository.
 
@@ -46,7 +71,7 @@ Based on [`main.tf`](./main.tf), you can create a new `google_monitoring_dashboa
 
 ```hcl
 module "fancy" {
-  source = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard//tile"
+  source = "https://github.com/chainguard-dev/terraform-cloudrun-dashboard//tiles/xy"
   title = "Fancy Tile"
   filter = [
     "metric.type=\"run.googleapis.com/request_count\"", // Show request counts...
